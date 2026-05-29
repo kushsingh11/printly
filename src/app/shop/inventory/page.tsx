@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listCategories, listProducts, shopOrdersData } from "@/lib/sheets";
+import { listProducts, shopOrdersData } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { formatINR } from "@/lib/money";
 
@@ -11,12 +11,9 @@ export default async function InventoryPage({
   await requireRole("SHOPKEEPER");
   const { cat } = await searchParams;
 
-  const [allProducts, categories, orders] = await Promise.all([
-    listProducts(false),
-    listCategories(),
-    shopOrdersData(),
-  ]);
+  const [allProducts, orders] = await Promise.all([listProducts(false), shopOrdersData()]);
   allProducts.sort((a, b) => a.sku.localeCompare(b.sku));
+  const categories = [...new Set(allProducts.map((p) => p.category))].sort();
 
   const lowStock = allProducts.filter((p) => p.stock < p.reorderAt);
   const products = cat ? allProducts.filter((p) => p.category === cat) : allProducts;

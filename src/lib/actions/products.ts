@@ -24,9 +24,10 @@ const baseSchema = z.object({
   stock: z.coerce.number().int().min(0),
   reorderAt: z.coerce.number().int().min(0),
   category: z.string().min(1, "Pick a category."),
-  newCategory: z.string().trim().optional(),
-  description: z.string().trim().max(500).optional(),
-  accentColor: z.string().trim().optional(),
+  // Absent form fields arrive as null (FormData.get), so allow null + undefined.
+  newCategory: z.string().trim().nullish(),
+  description: z.string().trim().max(500).nullish(),
+  accentColor: z.string().trim().nullish(),
   isHot: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
   isVisible: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
 });
@@ -46,7 +47,7 @@ function parse(formData: FormData) {
   });
 }
 
-function resolveCategory(category: string, newCategory?: string): string | null {
+function resolveCategory(category: string, newCategory?: string | null): string | null {
   if (category === "__new__") return (newCategory ?? "").trim() || null;
   return category;
 }

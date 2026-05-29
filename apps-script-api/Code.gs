@@ -13,9 +13,24 @@
  */
 
 // ---------- Web entry ----------
+// Handles both GET (fast: ?action=&payload=&secret=) and POST (JSON body).
+// The Next.js server uses GET to avoid Apps Script's slow POST->302 redirect.
+function doGet(e) {
+  return handle_(e);
+}
 function doPost(e) {
+  return handle_(e);
+}
+function handle_(e) {
   try {
-    const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    let body;
+    if (e && e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    } else {
+      const p = (e && e.parameter) || {};
+      body = { secret: p.secret, action: p.action, payload: p.payload ? JSON.parse(p.payload) : {} };
+    }
+    if (!body.action) return json_({ ok: true, data: "Printly Sheets API" });
     if (!body.secret || body.secret !== getSecret_()) return json_({ ok: false, error: "unauthorized" });
     const fn = HANDLERS[body.action];
     if (!fn) return json_({ ok: false, error: "unknown action: " + body.action });
@@ -23,9 +38,6 @@ function doPost(e) {
   } catch (err) {
     return json_({ ok: false, error: String((err && err.message) || err) });
   }
-}
-function doGet() {
-  return json_({ ok: true, data: "Printly Sheets API" });
 }
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);

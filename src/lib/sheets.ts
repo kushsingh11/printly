@@ -15,10 +15,15 @@ const API_SECRET = process.env.API_SECRET;
 
 async function call<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
   if (!API_URL || !API_SECRET) throw new Error("Sheets API not configured (APPS_SCRIPT_URL / API_SECRET).");
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ secret: API_SECRET, action, payload }),
+  // GET avoids Apps Script's POST->302 redirect (~1s faster). Server-to-server
+  // only, so the secret in the query string never reaches a browser.
+  const qs = new URLSearchParams({
+    action,
+    secret: API_SECRET,
+    payload: JSON.stringify(payload),
+  });
+  const res = await fetch(`${API_URL}?${qs.toString()}`, {
+    method: "GET",
     cache: "no-store",
     redirect: "follow",
   });
