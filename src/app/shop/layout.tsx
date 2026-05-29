@@ -1,11 +1,11 @@
-import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { ShopNav } from "@/components/shop/ShopNav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const user = await requireRole("SHOPKEEPER");
-  const settings = await prisma.pricingSettings.findUnique({ where: { id: 1 } });
+  const settings = await getSettings().catch(() => null);
 
   return (
     <div className="flex min-h-dvh">

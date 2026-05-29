@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { getOrder } from "@/lib/sheets";
 import { readStored } from "@/lib/storage";
 
 const TYPE_BY_EXT: Record<string, string> = {
@@ -16,14 +16,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const session = await auth();
   if (!session?.user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const order = await prisma.shopOrder.findUnique({ where: { id } });
-  if (!order || !order.receiptPath) return new NextResponse("Not found", { status: 404 });
+  const order = await getOrder(id);
+  if (!order || !order.receiptKey) return new NextResponse("Not found", { status: 404 });
 
-  const allowed = session.user.role === "SHOPKEEPER" || order.studentId === session.user.id;
+  const allowed = session.user.role === "SHOPKEEPER" || order.studentEmail === session.user.email;
   if (!allowed) return new NextResponse("Forbidden", { status: 403 });
 
-  const ext = order.receiptPath.slice(order.receiptPath.lastIndexOf(".")).toLowerCase();
-  const buf = await readStored(order.receiptPath);
+  const ext = order.receiptKey.slice(order.receiptKey.lastIndexOf(".")).toLowerCase();
+  const buf = await readStored(order.receiptKey);
   return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": TYPE_BY_EXT[ext] ?? "application/octet-stream",

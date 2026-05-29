@@ -1,14 +1,12 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listProducts } from "@/lib/sheets";
 import { formatINR } from "@/lib/money";
 import { AddToCartButton } from "@/components/student/AddToCartButton";
 
 export default async function StorePage() {
-  const products = await prisma.product.findMany({
-    where: { isVisible: true },
-    include: { category: true },
-    orderBy: [{ isHot: "desc" }, { name: "asc" }],
-  });
+  const products = (await listProducts(true)).sort(
+    (a, b) => Number(b.isHot) - Number(a.isHot) || a.name.localeCompare(b.name),
+  );
 
   return (
     <div>
@@ -28,7 +26,7 @@ export default async function StorePage() {
                 className="mb-2 flex aspect-square items-center justify-center overflow-hidden rounded-lg text-2xl font-semibold text-neutral-400"
                 style={{ backgroundColor: p.accentColor ?? "#f5f5f4" }}
               >
-                {p.imagePath ? (
+                {p.imageKey ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`/api/products/${p.id}/image`}
@@ -36,7 +34,7 @@ export default async function StorePage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span>{p.category.name[0]}</span>
+                  <span>{p.category[0]}</span>
                 )}
               </div>
 
@@ -46,7 +44,7 @@ export default async function StorePage() {
                 </span>
               )}
               <p className="line-clamp-2 text-sm font-medium">{p.name}</p>
-              <p className="mt-0.5 text-xs text-neutral-400">{p.category.name}</p>
+              <p className="mt-0.5 text-xs text-neutral-400">{p.category}</p>
               <p className="mt-1 text-sm font-semibold">{formatINR(p.price)}</p>
 
               <div className="mt-2">

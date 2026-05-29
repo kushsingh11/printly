@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
-import { prisma } from "@/lib/prisma";
+import { getPrintJob, getSettings } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { formatINR } from "@/lib/money";
 import { ReceiptUpload } from "@/components/student/ReceiptUpload";
@@ -10,12 +10,12 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
   const { id } = await params;
   const user = await requireRole("STUDENT");
 
-  const job = await prisma.printJob.findUnique({ where: { id } });
-  if (!job || job.studentId !== user.id) notFound();
+  const job = await getPrintJob(id);
+  if (!job || job.studentEmail !== user.email) notFound();
   // Allow paying when due, or re-uploading after a rejection.
   if (job.paymentStatus !== "PENDING" && job.paymentStatus !== "REJECTED") redirect("/orders");
 
-  const settings = await prisma.pricingSettings.findUnique({ where: { id: 1 } });
+  const settings = await getSettings();
   const upiId = settings?.upiId ?? "";
   const rupees = (job.amount / 100).toFixed(2);
 

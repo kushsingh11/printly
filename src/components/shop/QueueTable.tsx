@@ -1,11 +1,11 @@
-import type { PrintJob } from "@prisma/client";
+import type { PrintJob, WithStudent } from "@/lib/types";
 import { formatINR } from "@/lib/money";
 import { formatSpecs, formatTime, shopStatusBadge } from "@/lib/printDisplay";
 import { toneClass } from "@/lib/printStatus";
 import { advanceJob } from "@/lib/actions/queue";
 import { ShopActionForm } from "@/components/shop/ShopActionForm";
 
-type Job = PrintJob & { student: { name: string } };
+type Job = WithStudent<PrintJob>;
 
 function RowAction({ job }: { job: Job }) {
   if (job.status === "QUEUED")
@@ -51,7 +51,7 @@ export function QueueTable({ jobs }: { jobs: Job[] }) {
                       {j.code} · {formatTime(j.createdAt)}
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-neutral-600">{j.student.name}</td>
+                  <td className="px-4 py-2.5 text-neutral-600">{j.studentName}</td>
                   <td className="px-4 py-2.5 text-neutral-500">{formatSpecs(j)}</td>
                   <td className="px-4 py-2.5 font-medium">{formatINR(j.amount)}</td>
                   <td className="px-4 py-2.5">

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listCategories } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { createProduct } from "@/lib/actions/products";
 import { ProductForm } from "@/components/shop/ProductForm";
 
 export default async function NewProductPage() {
   await requireRole("SHOPKEEPER");
-  const categories = await prisma.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
+  const categories = await listCategories();
 
   return (
     <div className="p-6">

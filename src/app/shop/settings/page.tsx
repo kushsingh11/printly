@@ -1,10 +1,10 @@
-import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { SettingsForm } from "@/components/shop/SettingsForm";
 
 export default async function SettingsPage() {
   await requireRole("SHOPKEEPER");
-  const s = await prisma.pricingSettings.findUnique({ where: { id: 1 } });
+  const s = await getSettings().catch(() => null);
   if (!s) return <div className="p-6">Settings not initialized.</div>;
 
   return (

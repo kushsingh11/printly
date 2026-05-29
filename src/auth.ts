@@ -1,8 +1,8 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import type { Role } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Role } from "@/lib/types";
+import { getUserByEmail } from "@/lib/sheets";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -19,13 +19,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await getUserByEmail(email);
         if (!user) return null;
 
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
-        return { id: user.id, name: user.name, email: user.email, role: user.role };
+        // id == email: the Sheet keys student data by email.
+        return { id: user.email, name: user.name, email: user.email, role: user.role };
       },
     }),
   ],

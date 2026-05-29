@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { toPaise } from "@/lib/money";
+import { updateSettings as apiUpdateSettings } from "@/lib/sheets";
 
 export type SettingsActionState = { ok?: true; error?: string } | undefined;
 
@@ -39,25 +39,22 @@ export async function updateSettings(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the values." };
   const d = parsed.data;
 
-  await prisma.pricingSettings.update({
-    where: { id: 1 },
-    data: {
-      bwPerPage: toPaise(d.bwPerPage),
-      colorPerPage: toPaise(d.colorPerPage),
-      doubleSidedSurcharge: toPaise(d.doubleSidedSurcharge),
-      a3Surcharge: toPaise(d.a3Surcharge),
-      stapleFee: toPaise(d.stapleFee),
-      spiralFee: toPaise(d.spiralFee),
-      coverPageFee: toPaise(d.coverPageFee),
-      rushPercent: d.rushPercent,
-      freeSpiralAbove: toPaise(d.freeSpiralAbove),
-      acceptingJobs: d.acceptingJobs,
-      allowCashOnCollection: d.allowCashOnCollection,
-      autoEmailWhenReady: d.autoEmailWhenReady,
-      upiId: d.upiId || null,
-      shopName: d.shopName,
-      shopLocation: d.shopLocation || "Campus",
-    },
+  await apiUpdateSettings({
+    bwPerPage: toPaise(d.bwPerPage),
+    colorPerPage: toPaise(d.colorPerPage),
+    doubleSidedSurcharge: toPaise(d.doubleSidedSurcharge),
+    a3Surcharge: toPaise(d.a3Surcharge),
+    stapleFee: toPaise(d.stapleFee),
+    spiralFee: toPaise(d.spiralFee),
+    coverPageFee: toPaise(d.coverPageFee),
+    rushPercent: d.rushPercent,
+    freeSpiralAbove: toPaise(d.freeSpiralAbove),
+    acceptingJobs: d.acceptingJobs,
+    allowCashOnCollection: d.allowCashOnCollection,
+    autoEmailWhenReady: d.autoEmailWhenReady,
+    upiId: d.upiId || undefined,
+    shopName: d.shopName,
+    shopLocation: d.shopLocation || "Campus",
   });
 
   revalidatePath("/shop/settings");

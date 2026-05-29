@@ -1,4 +1,4 @@
-import type { OrderStatus, PaymentStatus } from "@prisma/client";
+import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import type { Tone } from "@/lib/printStatus";
 
 export const orderShopBadge: Record<OrderStatus, { label: string; tone: Tone }> = {

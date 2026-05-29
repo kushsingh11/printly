@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listOrdersByStudent, listPrintJobsByStudent } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { formatINR } from "@/lib/money";
 import { studentJobStatus, toneClass } from "@/lib/printStatus";
@@ -7,13 +7,10 @@ import { studentOrderStatus } from "@/lib/orderDisplay";
 
 export default async function OrdersPage() {
   const user = await requireRole("STUDENT");
+  const email = user.email ?? "";
   const [jobs, orders] = await Promise.all([
-    prisma.printJob.findMany({ where: { studentId: user.id }, orderBy: { createdAt: "desc" } }),
-    prisma.shopOrder.findMany({
-      where: { studentId: user.id },
-      include: { items: true },
-      orderBy: { createdAt: "desc" },
-    }),
+    listPrintJobsByStudent(email),
+    listOrdersByStudent(email),
   ]);
 
   return (

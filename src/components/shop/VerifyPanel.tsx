@@ -1,10 +1,10 @@
-import type { PrintJob } from "@prisma/client";
+import type { PrintJob, WithStudent } from "@/lib/types";
 import { formatINR } from "@/lib/money";
 import { formatSpecs } from "@/lib/printDisplay";
 import { verifyPayment, rejectPayment } from "@/lib/actions/queue";
 import { ShopActionForm } from "@/components/shop/ShopActionForm";
 
-type Job = PrintJob & { student: { name: string } };
+type Job = WithStudent<PrintJob>;
 
 export function VerifyPanel({ jobs }: { jobs: Job[] }) {
   if (jobs.length === 0) return null;
@@ -25,7 +25,7 @@ export function VerifyPanel({ jobs }: { jobs: Job[] }) {
                 <span className="text-neutral-400">{j.code}</span> · {j.fileName}
               </p>
               <p className="mt-0.5 text-xs text-neutral-500">
-                {j.student.name} · {formatSpecs(j)} · ref {j.upiRef ?? "—"}
+                {j.studentName} · {formatSpecs(j)} · ref {j.upiRef ?? "—"}
               </p>
               <div className="mt-1 flex gap-3 text-xs">
                 <a href={`/api/print/${j.id}/receipt`} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:underline">

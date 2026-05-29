@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { createUser, getUserByEmail } from "@/lib/sheets";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -57,18 +57,16 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
   }
 
   const email = parsed.data.email.toLowerCase().trim();
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await getUserByEmail(email);
   if (existing) return { error: "An account with this email already exists." };
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-  await prisma.user.create({
-    data: {
-      name: parsed.data.name.trim(),
-      email,
-      phone: parsed.data.phone || null,
-      passwordHash,
-      role: "STUDENT",
-    },
+  await createUser({
+    name: parsed.data.name.trim(),
+    email,
+    phone: parsed.data.phone || null,
+    passwordHash,
+    role: "STUDENT",
   });
 
   try {

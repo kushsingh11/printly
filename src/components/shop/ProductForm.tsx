@@ -4,14 +4,13 @@ import { useActionState, useState } from "react";
 import { type ProductActionState } from "@/lib/actions/products";
 import { formatINR, toPaise } from "@/lib/money";
 
-type Category = { id: string; name: string };
 type Initial = {
   id: string;
   name: string;
   price: number; // paise
   stock: number;
   reorderAt: number;
-  categoryId: string;
+  category: string;
   description: string | null;
   accentColor: string | null;
   isHot: boolean;
@@ -28,22 +27,21 @@ export function ProductForm({
   initial,
 }: {
   action: (prev: ProductActionState, formData: FormData) => Promise<ProductActionState>;
-  categories: Category[];
+  categories: string[];
   initial?: Initial;
 }) {
   const [state, formAction, isPending] = useActionState<ProductActionState, FormData>(action, undefined);
 
   const [name, setName] = useState(initial?.name ?? "");
   const [price, setPrice] = useState(initial ? String(initial.price / 100) : "");
-  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? categories[0]?.id ?? "__new__");
+  const [category, setCategory] = useState(initial?.category ?? categories[0] ?? "__new__");
   const [accentColor, setAccentColor] = useState(initial?.accentColor ?? "#ffe2d2");
   const [isHot, setIsHot] = useState(initial?.isHot ?? false);
   const [imgPreview, setImgPreview] = useState<string | null>(
     initial?.hasImage ? `/api/products/${initial.id}/image` : null,
   );
 
-  const categoryName =
-    categoryId === "__new__" ? "New" : categories.find((c) => c.id === categoryId)?.name ?? "";
+  const categoryName = category === "__new__" ? "New" : category;
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_260px]">
@@ -60,15 +58,15 @@ export function ProductForm({
 
             <div>
               <label className={label}>Category</label>
-              <select name="categoryId" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
+              <select name="category" value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
                 <option value="__new__">+ New category</option>
               </select>
-              {categoryId === "__new__" && (
+              {category === "__new__" && (
                 <input name="newCategory" placeholder="New category name" className={`${inputClass} mt-2`} />
               )}
             </div>

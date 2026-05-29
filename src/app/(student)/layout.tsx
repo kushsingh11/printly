@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { unreadCount } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { StudentNav } from "@/components/student/StudentNav";
@@ -8,7 +8,7 @@ import { NotificationBell } from "@/components/student/NotificationBell";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const user = await requireRole("STUDENT");
-  const unread = await prisma.notification.count({ where: { userId: user.id, read: false } });
+  const unread = user.email ? await unreadCount(user.email) : 0;
 
   return (
     <CartProvider>

@@ -1,13 +1,13 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { nextCode } from "@/lib/codes";
 import { toPaise } from "@/lib/money";
 import { saveProductImage } from "@/lib/storage";
+import * as sheets from "@/lib/sheets";
 
 export type ProductActionState = { error?: string } | undefined;
 
@@ -23,7 +23,7 @@ const baseSchema = z.object({
   price: z.coerce.number().min(0, "Price can't be negative."),
   stock: z.coerce.number().int().min(0),
   reorderAt: z.coerce.number().int().min(0),
-  categoryId: z.string().min(1, "Pick a category."),
+  category: z.string().min(1, "Pick a category."),
   newCategory: z.string().trim().optional(),
   description: z.string().trim().max(500).optional(),
   accentColor: z.string().trim().optional(),
@@ -37,7 +37,7 @@ function parse(formData: FormData) {
     price: formData.get("price"),
     stock: formData.get("stock"),
     reorderAt: formData.get("reorderAt"),
-    categoryId: formData.get("categoryId"),
+    category: formData.get("category"),
     newCategory: formData.get("newCategory"),
     description: formData.get("description"),
     accentColor: formData.get("accentColor"),
@@ -46,20 +46,9 @@ function parse(formData: FormData) {
   });
 }
 
-/** Resolve the chosen category, creating a new one if requested. */
-async function resolveCategoryId(categoryId: string, newCategory?: string): Promise<string | null> {
-  if (categoryId === "__new__") {
-    const name = (newCategory ?? "").trim();
-    if (!name) return null;
-    const cat = await prisma.category.upsert({
-      where: { name },
-      update: {},
-      create: { name },
-    });
-    return cat.id;
-  }
-  const exists = await prisma.category.findUnique({ where: { id: categoryId } });
-  return exists ? exists.id : null;
+function resolveCategory(category: string, newCategory?: string): string | null {
+  if (category === "__new__") return (newCategory ?? "").trim() || null;
+  return category;
 }
 
 async function readImage(formData: FormData): Promise<{ ext: string; bytes: Buffer } | null | "invalid"> {
@@ -80,32 +69,27 @@ export async function createProduct(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   const d = parsed.data;
 
-  const categoryId = await resolveCategoryId(d.categoryId, d.newCategory);
-  if (!categoryId) return { error: "Please choose or name a category." };
+  const category = resolveCategory(d.category, d.newCategory);
+  if (!category) return { error: "Please choose or name a category." };
 
   const image = await readImage(formData);
   if (image === "invalid") return { error: "Image must be PNG/JPG/WebP under 2 MB." };
 
-  const sku = await nextCode("sku", "P");
-  const product = await prisma.product.create({
-    data: {
-      sku,
-      name: d.name,
-      categoryId,
-      price: toPaise(d.price),
-      stock: d.stock,
-      reorderAt: d.reorderAt,
-      description: d.description || null,
-      accentColor: d.accentColor || null,
-      isHot: d.isHot,
-      isVisible: d.isVisible,
-    },
-  });
+  let imageKey = "";
+  if (image) imageKey = await saveProductImage(randomUUID(), `image${image.ext}`, image.bytes);
 
-  if (image) {
-    const rel = await saveProductImage(product.id, `image${image.ext}`, image.bytes);
-    await prisma.product.update({ where: { id: product.id }, data: { imagePath: rel } });
-  }
+  await sheets.createProduct({
+    name: d.name,
+    category,
+    price: toPaise(d.price),
+    stock: d.stock,
+    reorderAt: d.reorderAt,
+    description: d.description || "",
+    accentColor: d.accentColor || "",
+    isHot: d.isHot,
+    isVisible: d.isVisible,
+    imageKey,
+  });
 
   revalidatePath("/shop/inventory");
   revalidatePath("/store");
@@ -118,39 +102,31 @@ export async function updateProduct(
 ): Promise<ProductActionState> {
   await requireRole("SHOPKEEPER");
   const id = String(formData.get("id") ?? "");
-  const existing = await prisma.product.findUnique({ where: { id } });
-  if (!existing) return { error: "Product not found." };
-
   const parsed = parse(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   const d = parsed.data;
 
-  const categoryId = await resolveCategoryId(d.categoryId, d.newCategory);
-  if (!categoryId) return { error: "Please choose or name a category." };
+  const category = resolveCategory(d.category, d.newCategory);
+  if (!category) return { error: "Please choose or name a category." };
 
   const image = await readImage(formData);
   if (image === "invalid") return { error: "Image must be PNG/JPG/WebP under 2 MB." };
 
-  let imagePath = existing.imagePath;
-  if (image) {
-    imagePath = await saveProductImage(id, `image${image.ext}`, image.bytes);
-  }
+  const patch: Record<string, unknown> = {
+    id,
+    name: d.name,
+    category,
+    price: toPaise(d.price),
+    stock: d.stock,
+    reorderAt: d.reorderAt,
+    description: d.description || "",
+    accentColor: d.accentColor || "",
+    isHot: d.isHot,
+    isVisible: d.isVisible,
+  };
+  if (image) patch.imageKey = await saveProductImage(id, `image${image.ext}`, image.bytes);
 
-  await prisma.product.update({
-    where: { id },
-    data: {
-      name: d.name,
-      categoryId,
-      price: toPaise(d.price),
-      stock: d.stock,
-      reorderAt: d.reorderAt,
-      description: d.description || null,
-      accentColor: d.accentColor || null,
-      isHot: d.isHot,
-      isVisible: d.isVisible,
-      imagePath,
-    },
-  });
+  await sheets.updateProduct(patch);
 
   revalidatePath("/shop/inventory");
   revalidatePath("/store");

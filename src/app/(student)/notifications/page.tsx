@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { NotificationType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { NotificationType } from "@/lib/types";
+import { listNotifications } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { MarkReadOnView } from "@/components/student/MarkReadOnView";
 
@@ -23,11 +23,7 @@ function when(d: Date): string {
 
 export default async function NotificationsPage() {
   const user = await requireRole("STUDENT");
-  const notifs = await prisma.notification.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const notifs = user.email ? await listNotifications(user.email) : [];
   const hasUnread = notifs.some((n) => !n.read);
 
   return (

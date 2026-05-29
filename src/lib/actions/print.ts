@@ -1,13 +1,18 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { nextCode } from "@/lib/codes";
 import { computePrintPrice } from "@/lib/pricing";
 import { promoteTmpToJob, readTmp, saveJobFile } from "@/lib/storage";
+import {
+  createPrintJob as apiCreatePrintJob,
+  getPrintJob,
+  getSettings,
+  submitPrintReceipt,
+} from "@/lib/sheets";
 
 export type PrintActionState = { error?: string } | undefined;
 
@@ -43,8 +48,12 @@ export async function createPrintJob(
   if (!parsed.success) return { error: "Please complete all the print options." };
   const input = parsed.data;
 
-  const settings = await prisma.pricingSettings.findUnique({ where: { id: 1 } });
-  if (!settings) return { error: "Shop is not configured yet. Try again later." };
+  let settings;
+  try {
+    settings = await getSettings();
+  } catch {
+    return { error: "Shop is not configured yet. Try again later." };
+  }
   if (!settings.acceptingJobs) {
     return { error: "The shop is not accepting new print jobs right now." };
   }
@@ -74,32 +83,25 @@ export async function createPrintJob(
   };
   const { total } = computePrintPrice(settings, opts);
 
-  const code = await nextCode("print", "PR");
+  // Move the upload into a stable Blobs key (its own uuid namespace).
+  const fileKey = await promoteTmpToJob(input.token, randomUUID(), "document.pdf");
 
-  const job = await prisma.printJob.create({
-    data: {
-      code,
-      studentId: user.id,
-      fileName: input.fileName.slice(0, 200),
-      filePath: "", // set after we move the file into the job folder
-      pageCount,
-      copies: input.copies,
-      color: input.color,
-      sided: input.sided,
-      paperSize: input.paperSize,
-      binding: input.binding,
-      coverPage: input.coverPage,
-      rush: input.rush,
-      amount: total,
-      paymentStatus: "PENDING",
-      status: "AWAITING_PAYMENT",
-    },
+  const { id } = await apiCreatePrintJob({
+    studentEmail: user.email,
+    fileName: input.fileName.slice(0, 200),
+    fileKey,
+    pageCount,
+    copies: input.copies,
+    color: input.color,
+    sided: input.sided,
+    paperSize: input.paperSize,
+    binding: input.binding,
+    coverPage: input.coverPage,
+    rush: input.rush,
+    amount: total,
   });
 
-  const rel = await promoteTmpToJob(input.token, job.id, "document.pdf");
-  await prisma.printJob.update({ where: { id: job.id }, data: { filePath: rel } });
-
-  redirect(`/print/${job.id}/pay`);
+  redirect(`/print/${id}/pay`);
 }
 
 const RECEIPT_MAX = 10 * 1024 * 1024;
@@ -119,8 +121,8 @@ export async function submitReceipt(
   const upiRef = String(formData.get("upiRef") ?? "").trim();
   const receipt = formData.get("receipt");
 
-  const job = await prisma.printJob.findUnique({ where: { id: jobId } });
-  if (!job || job.studentId !== user.id) return { error: "Print job not found." };
+  const job = await getPrintJob(jobId);
+  if (!job || job.studentEmail !== user.email) return { error: "Print job not found." };
   if (job.paymentStatus !== "PENDING" && job.paymentStatus !== "REJECTED") {
     redirect("/orders");
   }
@@ -133,12 +135,9 @@ export async function submitReceipt(
   if (!ext) return { error: "Receipt must be a PNG, JPG, or PDF." };
 
   const bytes = Buffer.from(await receipt.arrayBuffer());
-  const rel = await saveJobFile(jobId, `receipt${ext}`, bytes);
+  const receiptKey = await saveJobFile(jobId, `receipt${ext}`, bytes);
 
-  await prisma.printJob.update({
-    where: { id: jobId },
-    data: { paymentStatus: "SUBMITTED", upiRef, receiptPath: rel },
-  });
+  await submitPrintReceipt({ id: jobId, upiRef, receiptKey });
 
   redirect("/orders");
 }

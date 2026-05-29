@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listCategories, listProducts, shopOrdersData } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { formatINR } from "@/lib/money";
 
@@ -11,28 +11,22 @@ export default async function InventoryPage({
   await requireRole("SHOPKEEPER");
   const { cat } = await searchParams;
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const [allProducts, categories, salesToday, pending] = await Promise.all([
-    prisma.product.findMany({ include: { category: true }, orderBy: { sku: "asc" } }),
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.shopOrder.aggregate({
-      _sum: { total: true },
-      where: { paymentStatus: "VERIFIED", paidAt: { gte: startOfToday } },
-    }),
-    prisma.shopOrder.findMany({ where: { status: "READY" }, select: { total: true } }),
+  const [allProducts, categories, orders] = await Promise.all([
+    listProducts(false),
+    listCategories(),
+    shopOrdersData(),
   ]);
+  allProducts.sort((a, b) => a.sku.localeCompare(b.sku));
 
   const lowStock = allProducts.filter((p) => p.stock < p.reorderAt);
-  const products = cat ? allProducts.filter((p) => p.category.name === cat) : allProducts;
-  const pendingValue = pending.reduce((s, o) => s + o.total, 0);
+  const products = cat ? allProducts.filter((p) => p.category === cat) : allProducts;
+  const pendingValue = orders.stats.pendingValue;
 
   const stats = [
     { value: String(allProducts.length), label: `Across ${categories.length} categories`, top: "Total SKUs" },
-    { value: formatINR(salesToday._sum.total ?? 0), label: "today", top: "Shop sales" },
+    { value: formatINR(orders.stats.todayRevenue), label: "today", top: "Shop sales" },
     { value: String(lowStock.length), label: "reorder soon", top: "Low stock" },
-    { value: `${pending.length}`, label: `${formatINR(pendingValue)} to collect`, top: "Pending pickups" },
+    { value: `${orders.stats.pendingPickups}`, label: `${formatINR(pendingValue)} to collect`, top: "Pending pickups" },
   ];
 
   return (
@@ -65,8 +59,8 @@ export default async function InventoryPage({
           All
         </FilterTab>
         {categories.map((c) => (
-          <FilterTab key={c.id} href={`/shop/inventory?cat=${encodeURIComponent(c.name)}`} active={cat === c.name}>
-            {c.name}
+          <FilterTab key={c} href={`/shop/inventory?cat=${encodeURIComponent(c)}`} active={cat === c}>
+            {c}
           </FilterTab>
         ))}
       </div>
@@ -93,7 +87,7 @@ export default async function InventoryPage({
                     <span className="ml-2 text-xs text-neutral-400">{p.sku}</span>
                     {p.isHot && <span className="ml-2 rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">HOT</span>}
                   </td>
-                  <td className="px-4 py-2.5 text-neutral-500">{p.category.name}</td>
+                  <td className="px-4 py-2.5 text-neutral-500">{p.category}</td>
                   <td className="px-4 py-2.5">{formatINR(p.price)}</td>
                   <td className="px-4 py-2.5">
                     <span className={low ? "font-semibold text-red-600" : ""}>{p.stock}</span>

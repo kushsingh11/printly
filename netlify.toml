@@ -1,10 +1,5 @@
 # Netlify build for the Printly Next.js app.
-# The Next.js runtime is auto-detected and installed by Netlify.
+# Data lives in Google Sheets via an Apps Script API (APPS_SCRIPT_URL + API_SECRET
+# env vars). Files live in Netlify Blobs. The Next.js runtime is auto-detected.
 [build]
-  # Build doesn't touch the DB (avoids chicken-and-egg on first deploy).
-  # Migrations + seed are applied separately against the Netlify database.
-  command = "prisma generate && next build"
-
-[build.environment]
-  # Quiet Prisma's update checks during CI builds.
-  CHECKPOINT_DISABLE = "1"
+  command = "next build"

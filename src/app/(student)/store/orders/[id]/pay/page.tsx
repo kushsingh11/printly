@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
-import { prisma } from "@/lib/prisma";
+import { getOrder, getSettings } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { formatINR } from "@/lib/money";
 import { OrderReceiptUpload } from "@/components/student/OrderReceiptUpload";
@@ -10,11 +10,11 @@ export default async function OrderPayPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const user = await requireRole("STUDENT");
 
-  const order = await prisma.shopOrder.findUnique({ where: { id }, include: { items: true } });
-  if (!order || order.studentId !== user.id) notFound();
+  const order = await getOrder(id);
+  if (!order || order.studentEmail !== user.email) notFound();
   if (order.paymentStatus !== "PENDING" && order.paymentStatus !== "REJECTED") redirect("/orders");
 
-  const settings = await prisma.pricingSettings.findUnique({ where: { id: 1 } });
+  const settings = await getSettings();
   const upiId = settings?.upiId ?? "";
   const rupees = (order.total / 100).toFixed(2);
 
@@ -36,7 +36,7 @@ export default async function OrderPayPage({ params }: { params: Promise<{ id: s
       <div className="rounded-2xl border border-neutral-200 bg-white p-5">
         <ul className="mb-3 space-y-1.5 text-sm">
           {order.items.map((it) => (
-            <li key={it.id} className="flex justify-between text-neutral-600">
+            <li key={it.productId} className="flex justify-between text-neutral-600">
               <span>
                 {it.name} × {it.qty}
               </span>

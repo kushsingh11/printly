@@ -1,22 +1,22 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { PrintConfigurator } from "@/components/student/PrintConfigurator";
 
 export default async function NewPrintPage() {
   await requireRole("STUDENT");
-  const s = await prisma.pricingSettings.findUnique({ where: { id: 1 } });
+  const s = await getSettings();
 
   const priceConfig = {
-    bwPerPage: s?.bwPerPage ?? 200,
-    colorPerPage: s?.colorPerPage ?? 1000,
-    doubleSidedSurcharge: s?.doubleSidedSurcharge ?? 0,
-    a3Surcharge: s?.a3Surcharge ?? 300,
-    stapleFee: s?.stapleFee ?? 500,
-    spiralFee: s?.spiralFee ?? 3000,
-    coverPageFee: s?.coverPageFee ?? 1000,
-    rushPercent: s?.rushPercent ?? 20,
-    freeSpiralAbove: s?.freeSpiralAbove ?? 0,
+    bwPerPage: s.bwPerPage,
+    colorPerPage: s.colorPerPage,
+    doubleSidedSurcharge: s.doubleSidedSurcharge,
+    a3Surcharge: s.a3Surcharge,
+    stapleFee: s.stapleFee,
+    spiralFee: s.spiralFee,
+    coverPageFee: s.coverPageFee,
+    rushPercent: s.rushPercent,
+    freeSpiralAbove: s.freeSpiralAbove,
   };
 
   return (
@@ -27,7 +27,7 @@ export default async function NewPrintPage() {
         </Link>
         <h1 className="mt-1 text-xl font-semibold">New print job</h1>
       </div>
-      <PrintConfigurator priceConfig={priceConfig} acceptingJobs={s?.acceptingJobs ?? true} />
+      <PrintConfigurator priceConfig={priceConfig} acceptingJobs={s.acceptingJobs} />
     </div>
   );
 }

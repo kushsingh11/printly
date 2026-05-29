@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { queueData } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { formatINR } from "@/lib/money";
 import { VerifyPanel } from "@/components/shop/VerifyPanel";
@@ -16,43 +16,14 @@ export default async function PrintQueuePage({
   const { view } = await searchParams;
   const isTable = view === "table";
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const withStudent = { student: { select: { name: true } } } as const;
-
-  const [toVerify, active, pickedUp, queued, printing, ready, todayAgg] = await Promise.all([
-    prisma.printJob.findMany({
-      where: { paymentStatus: "SUBMITTED" },
-      include: withStudent,
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.printJob.findMany({
-      where: { paymentStatus: "VERIFIED", status: { in: ["QUEUED", "PRINTING", "READY"] } },
-      include: withStudent,
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.printJob.findMany({
-      where: { status: "PICKED_UP" },
-      include: withStudent,
-      orderBy: { updatedAt: "desc" },
-      take: 8,
-    }),
-    prisma.printJob.count({ where: { status: "QUEUED" } }),
-    prisma.printJob.count({ where: { status: "PRINTING" } }),
-    prisma.printJob.count({ where: { status: "READY" } }),
-    prisma.printJob.aggregate({
-      _sum: { amount: true },
-      where: { paymentStatus: "VERIFIED", paidAt: { gte: startOfToday } },
-    }),
-  ]);
+  const { toVerify, active, pickedUp, stats: s } = await queueData();
 
   const boardJobs = [...active, ...pickedUp];
   const stats = [
-    { label: "In queue", value: String(queued) },
-    { label: "Printing", value: String(printing) },
-    { label: "Ready for pickup", value: String(ready) },
-    { label: "Today", value: formatINR(todayAgg._sum.amount ?? 0) },
+    { label: "In queue", value: String(s.queued) },
+    { label: "Printing", value: String(s.printing) },
+    { label: "Ready for pickup", value: String(s.ready) },
+    { label: "Today", value: formatINR(s.todayRevenue) },
   ];
 
   return (

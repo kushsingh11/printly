@@ -1,4 +1,4 @@
-import type { PaymentStatus, PrintStatus } from "@prisma/client";
+import type { PaymentStatus, PrintStatus } from "@/lib/types";
 
 export type Tone = "neutral" | "blue" | "amber" | "green" | "red";
 

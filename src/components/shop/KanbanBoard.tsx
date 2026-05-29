@@ -1,10 +1,10 @@
-import type { PrintJob, PrintStatus } from "@prisma/client";
+import type { PrintJob, PrintStatus, WithStudent } from "@/lib/types";
 import { formatINR } from "@/lib/money";
 import { formatSpecs, formatTime } from "@/lib/printDisplay";
 import { advanceJob } from "@/lib/actions/queue";
 import { ShopActionForm } from "@/components/shop/ShopActionForm";
 
-type Job = PrintJob & { student: { name: string } };
+type Job = WithStudent<PrintJob>;
 
 const COLUMNS: { status: PrintStatus; title: string }[] = [
   { status: "QUEUED", title: "Queued" },
@@ -48,7 +48,7 @@ function JobCard({ job }: { job: Job }) {
         {job.fileName}
       </p>
       <p className="text-xs text-neutral-400">
-        {job.student.name} · {formatTime(job.createdAt)}
+        {job.studentName} · {formatTime(job.createdAt)}
       </p>
       <p className="mt-1 text-xs text-neutral-500">{formatSpecs(job)}</p>
       <div className="mt-2 flex items-center justify-between">

@@ -1,4 +1,4 @@
-import type { PrintJob, PrintStatus } from "@prisma/client";
+import type { PrintJob, PrintStatus } from "@/lib/types";
 import type { Tone } from "@/lib/printStatus";
 
 type SpecsInput = Pick<

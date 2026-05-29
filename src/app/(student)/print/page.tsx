@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listPrintJobsByStudent } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 
 export default async function StudentPrintPage() {
   const user = await requireRole("STUDENT");
-  const jobs = await prisma.printJob.findMany({
-    where: { studentId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
+  const jobs = (user.email ? await listPrintJobsByStudent(user.email) : []).slice(0, 10);
 
   return (
     <div className="space-y-6">

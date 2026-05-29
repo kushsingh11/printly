@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getProduct, listCategories } from "@/lib/sheets";
 import { requireRole } from "@/lib/session";
 import { updateProduct } from "@/lib/actions/products";
 import { ProductForm } from "@/components/shop/ProductForm";
@@ -9,10 +9,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   await requireRole("SHOPKEEPER");
   const { id } = await params;
 
-  const [product, categories] = await Promise.all([
-    prisma.product.findUnique({ where: { id } }),
-    prisma.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-  ]);
+  const [product, categories] = await Promise.all([getProduct(id), listCategories()]);
   if (!product) notFound();
 
   return (
@@ -33,12 +30,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           price: product.price,
           stock: product.stock,
           reorderAt: product.reorderAt,
-          categoryId: product.categoryId,
+          category: product.category,
           description: product.description,
           accentColor: product.accentColor,
           isHot: product.isHot,
           isVisible: product.isVisible,
-          hasImage: !!product.imagePath,
+          hasImage: !!product.imageKey,
         }}
       />
     </div>

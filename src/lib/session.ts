@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/lib/types";
 import { auth } from "@/auth";
 
 /** Require a logged-in user; redirect to /login otherwise. */

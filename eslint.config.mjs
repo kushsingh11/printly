@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Build artifacts + non-Next sources.
+    ".netlify/**",
+    "apps-script/**",
+    "apps-script-api/**",
   ]),
 ]);
 
