@@ -81,3 +81,7 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
 export async function logoutAction() {
   await signOut({ redirectTo: "/login" });
 }
+
+export async function googleLogin() {
+  await signIn("google", { redirectTo: "/" });
+}
