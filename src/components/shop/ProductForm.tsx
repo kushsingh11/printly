@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { type ProductActionState } from "@/lib/actions/products";
 import { formatINR, toPaise } from "@/lib/money";
+import { driveImageUrl, isImageUrl } from "@/lib/images";
 
 type Initial = {
   id: string;
@@ -15,7 +16,7 @@ type Initial = {
   accentColor: string | null;
   isHot: boolean;
   isVisible: boolean;
-  hasImage: boolean;
+  imageKey: string | null;
 };
 
 const inputClass = "w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm";
@@ -37,10 +38,13 @@ export function ProductForm({
   const [category, setCategory] = useState(initial?.category ?? categories[0] ?? "__new__");
   const [accentColor, setAccentColor] = useState(initial?.accentColor ?? "#ffe2d2");
   const [isHot, setIsHot] = useState(initial?.isHot ?? false);
-  const [imgPreview, setImgPreview] = useState<string | null>(
-    initial?.hasImage ? `/api/products/${initial.id}/image` : null,
+  const [imageUrl, setImageUrl] = useState(
+    initial && isImageUrl(initial.imageKey) ? initial.imageKey ?? "" : "",
   );
 
+  const legacyBlobSrc =
+    initial?.imageKey && !isImageUrl(initial.imageKey) ? `/api/products/${initial.id}/image` : null;
+  const previewSrc = imageUrl ? driveImageUrl(imageUrl) : legacyBlobSrc;
   const categoryName = category === "__new__" ? "New" : category;
 
   return (
@@ -97,17 +101,18 @@ export function ProductForm({
           <h2 className="mb-3 text-sm font-semibold text-neutral-600">Appearance</h2>
           <div className="space-y-3">
             <div>
-              <label className={label}>Product image (PNG/JPG/WebP, max 2 MB)</label>
+              <label className={label}>Image link (Google Drive or image URL)</label>
               <input
-                type="file"
-                name="image"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  setImgPreview(f ? URL.createObjectURL(f) : imgPreview);
-                }}
-                className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+                type="text"
+                name="imageUrl"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://drive.google.com/file/d/…/view"
+                className={inputClass}
               />
+              <p className="mt-1 text-xs text-neutral-400">
+                Drive files must be shared “Anyone with the link”. Leave blank for a colored placeholder.
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <label className={label}>Accent color</label>
@@ -136,9 +141,9 @@ export function ProductForm({
         <p className="mb-2 text-xs font-medium text-neutral-400">Live preview · student shop</p>
         <div className="w-40 rounded-xl border border-neutral-200 bg-white p-3">
           <div className="mb-2 flex aspect-square items-center justify-center overflow-hidden rounded-lg text-2xl font-semibold text-neutral-400" style={{ backgroundColor: accentColor }}>
-            {imgPreview ? (
+            {previewSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imgPreview} alt="" className="h-full w-full object-cover" />
+              <img src={previewSrc} alt="" className="h-full w-full object-cover" />
             ) : (
               <span>{categoryName[0] ?? "?"}</span>
             )}

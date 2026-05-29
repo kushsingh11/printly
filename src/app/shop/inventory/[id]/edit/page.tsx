@@ -35,7 +35,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           accentColor: product.accentColor,
           isHot: product.isHot,
           isVisible: product.isVisible,
-          hasImage: !!product.imageKey,
+          imageKey: product.imageKey,
         }}
       />
     </div>

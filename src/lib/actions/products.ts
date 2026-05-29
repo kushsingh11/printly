@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/session";
 import { toPaise } from "@/lib/money";
 import { saveProductImage } from "@/lib/storage";
+import { driveImageUrl } from "@/lib/images";
 import * as sheets from "@/lib/sheets";
 
 export type ProductActionState = { error?: string } | undefined;
@@ -73,11 +74,12 @@ export async function createProduct(
   const category = resolveCategory(d.category, d.newCategory);
   if (!category) return { error: "Please choose or name a category." };
 
+  const imageUrlInput = String(formData.get("imageUrl") ?? "").trim();
   const image = await readImage(formData);
   if (image === "invalid") return { error: "Image must be PNG/JPG/WebP under 2 MB." };
 
-  let imageKey = "";
-  if (image) imageKey = await saveProductImage(randomUUID(), `image${image.ext}`, image.bytes);
+  let imageKey = imageUrlInput ? driveImageUrl(imageUrlInput) : "";
+  if (!imageKey && image) imageKey = await saveProductImage(randomUUID(), `image${image.ext}`, image.bytes);
 
   await sheets.createProduct({
     name: d.name,
@@ -110,6 +112,7 @@ export async function updateProduct(
   const category = resolveCategory(d.category, d.newCategory);
   if (!category) return { error: "Please choose or name a category." };
 
+  const imageUrlInput = String(formData.get("imageUrl") ?? "").trim();
   const image = await readImage(formData);
   if (image === "invalid") return { error: "Image must be PNG/JPG/WebP under 2 MB." };
 
@@ -125,7 +128,8 @@ export async function updateProduct(
     isHot: d.isHot,
     isVisible: d.isVisible,
   };
-  if (image) patch.imageKey = await saveProductImage(id, `image${image.ext}`, image.bytes);
+  if (imageUrlInput) patch.imageKey = driveImageUrl(imageUrlInput);
+  else if (image) patch.imageKey = await saveProductImage(id, `image${image.ext}`, image.bytes);
 
   await sheets.updateProduct(patch);
 

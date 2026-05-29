@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listProducts } from "@/lib/sheets";
 import { formatINR } from "@/lib/money";
+import { productImageSrc } from "@/lib/images";
 import { AddToCartButton } from "@/components/student/AddToCartButton";
 
 export default async function StorePage() {
@@ -20,19 +21,16 @@ export default async function StorePage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {products.map((p) => {
           const out = p.stock <= 0;
+          const img = productImageSrc(p);
           return (
             <div key={p.id} className="flex flex-col rounded-xl border border-neutral-200 bg-white p-3">
               <div
                 className="mb-2 flex aspect-square items-center justify-center overflow-hidden rounded-lg text-2xl font-semibold text-neutral-400"
                 style={{ backgroundColor: p.accentColor ?? "#f5f5f4" }}
               >
-                {p.imageKey ? (
+                {img ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/products/${p.id}/image`}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={img} alt={p.name} className="h-full w-full object-cover" />
                 ) : (
                   <span>{p.category[0]}</span>
                 )}
