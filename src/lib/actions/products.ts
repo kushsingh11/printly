@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/session";
 import { toPaise } from "@/lib/money";
@@ -94,6 +94,7 @@ export async function createProduct(
     imageKey,
   });
 
+  updateTag(sheets.CACHE_TAGS.products);
   revalidatePath("/shop/inventory");
   revalidatePath("/store");
   redirect("/shop/inventory");
@@ -133,6 +134,7 @@ export async function updateProduct(
 
   await sheets.updateProduct(patch);
 
+  updateTag(sheets.CACHE_TAGS.products);
   revalidatePath("/shop/inventory");
   revalidatePath("/store");
   redirect("/shop/inventory");

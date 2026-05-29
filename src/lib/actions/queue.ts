@@ -1,20 +1,26 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import type { PrintStatus } from "@/lib/types";
 import { requireRole } from "@/lib/session";
 import * as sheets from "@/lib/sheets";
 
+function bust() {
+  updateTag(sheets.CACHE_TAGS.printjobs);
+  updateTag(sheets.CACHE_TAGS.notifications);
+  revalidatePath("/shop");
+}
+
 export async function verifyPayment(formData: FormData) {
   await requireRole("SHOPKEEPER");
   await sheets.verifyPrintPayment(String(formData.get("jobId") ?? ""));
-  revalidatePath("/shop");
+  bust();
 }
 
 export async function rejectPayment(formData: FormData) {
   await requireRole("SHOPKEEPER");
   await sheets.rejectPrintPayment(String(formData.get("jobId") ?? ""));
-  revalidatePath("/shop");
+  bust();
 }
 
 export async function advanceJob(formData: FormData) {
@@ -22,5 +28,5 @@ export async function advanceJob(formData: FormData) {
   const id = String(formData.get("jobId") ?? "");
   const to = String(formData.get("to") ?? "") as PrintStatus;
   await sheets.advancePrintJob(id, to);
-  revalidatePath("/shop");
+  bust();
 }

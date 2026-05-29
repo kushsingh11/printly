@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
+import { updateTag } from "next/cache";
 import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
 import { requireRole } from "@/lib/session";
@@ -12,6 +13,7 @@ import {
   getPrintJob,
   getSettings,
   submitPrintReceipt,
+  CACHE_TAGS,
 } from "@/lib/sheets";
 
 export type PrintActionState = { error?: string } | undefined;
@@ -101,6 +103,7 @@ export async function createPrintJob(
     amount: total,
   });
 
+  updateTag(CACHE_TAGS.printjobs);
   redirect(`/print/${id}/pay`);
 }
 
@@ -139,5 +142,6 @@ export async function submitReceipt(
 
   await submitPrintReceipt({ id: jobId, upiRef, receiptKey });
 
+  updateTag(CACHE_TAGS.printjobs);
   redirect("/orders");
 }

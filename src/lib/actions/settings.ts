@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/session";
 import { toPaise } from "@/lib/money";
-import { updateSettings as apiUpdateSettings } from "@/lib/sheets";
+import { updateSettings as apiUpdateSettings, CACHE_TAGS } from "@/lib/sheets";
 
 export type SettingsActionState = { ok?: true; error?: string } | undefined;
 
@@ -57,6 +57,7 @@ export async function updateSettings(
     shopLocation: d.shopLocation || "Campus",
   });
 
+  updateTag(CACHE_TAGS.settings);
   revalidatePath("/shop/settings");
   revalidatePath("/print/new");
   return { ok: true };

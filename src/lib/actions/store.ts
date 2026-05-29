@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/session";
 import { saveOrderFile } from "@/lib/storage";
@@ -26,6 +26,7 @@ export async function createOrder(
 
   try {
     const { id } = await sheets.createOrder({ studentEmail: user.email, items: parsed.data });
+    updateTag(sheets.CACHE_TAGS.orders);
     return { ok: true, orderId: id };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Couldn't place the order." };
@@ -65,6 +66,7 @@ export async function submitOrderReceipt(
   const receiptKey = await saveOrderFile(orderId, `receipt${ext}`, bytes);
   await sheets.submitOrderReceipt({ id: orderId, upiRef, receiptKey });
 
+  updateTag(sheets.CACHE_TAGS.orders);
   redirect("/orders");
 }
 
@@ -76,6 +78,9 @@ function orderId(formData: FormData): string {
 export async function verifyOrderPayment(formData: FormData) {
   await requireRole("SHOPKEEPER");
   await sheets.verifyOrderPayment(orderId(formData));
+  updateTag(sheets.CACHE_TAGS.orders);
+  updateTag(sheets.CACHE_TAGS.products); // stock decremented
+  updateTag(sheets.CACHE_TAGS.notifications);
   revalidatePath("/shop/orders");
   revalidatePath("/shop/inventory");
 }
@@ -83,11 +88,14 @@ export async function verifyOrderPayment(formData: FormData) {
 export async function rejectOrderPayment(formData: FormData) {
   await requireRole("SHOPKEEPER");
   await sheets.rejectOrderPayment(orderId(formData));
+  updateTag(sheets.CACHE_TAGS.orders);
+  updateTag(sheets.CACHE_TAGS.notifications);
   revalidatePath("/shop/orders");
 }
 
 export async function markOrderPickedUp(formData: FormData) {
   await requireRole("SHOPKEEPER");
   await sheets.markOrderPickedUp(orderId(formData));
+  updateTag(sheets.CACHE_TAGS.orders);
   revalidatePath("/shop/orders");
 }
