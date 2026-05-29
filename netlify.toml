@@ -1,9 +1,9 @@
 # Netlify build for the Printly Next.js app.
 # The Next.js runtime is auto-detected and installed by Netlify.
 [build]
-  # Generate the Prisma client, apply migrations + seed to the auto-provisioned
-  # Netlify database, then build Next. Migrations use the UNPOOLED connection.
-  command = "prisma generate && prisma migrate deploy && prisma db seed && next build"
+  # Build doesn't touch the DB (avoids chicken-and-egg on first deploy).
+  # Migrations + seed are applied separately against the Netlify database.
+  command = "prisma generate && next build"
 
 [build.environment]
   # Quiet Prisma's update checks during CI builds.
