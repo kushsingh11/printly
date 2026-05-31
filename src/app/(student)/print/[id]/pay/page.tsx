@@ -19,12 +19,13 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
   const upiId = settings?.upiId ?? "";
   const rupees = (job.amount / 100).toFixed(2);
 
+  let upiLink: string | null = null;
   let qrDataUrl: string | null = null;
   if (upiId) {
-    const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+    upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
       settings?.shopName ?? "Printly",
     )}&am=${rupees}&cu=INR&tn=${encodeURIComponent(job.code)}`;
-    qrDataUrl = await QRCode.toDataURL(link, { width: 240, margin: 1 });
+    qrDataUrl = await QRCode.toDataURL(upiLink, { width: 240, margin: 1 });
   }
 
   return (
@@ -38,8 +39,24 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
         <p className="text-sm text-neutral-500">Amount to pay</p>
         <p className="mb-4 text-3xl font-semibold">{formatINR(job.amount)}</p>
 
-        {qrDataUrl ? (
+        {upiLink && qrDataUrl ? (
           <>
+            <a
+              href={upiLink}
+              className="block w-full rounded-lg bg-brand-600 px-4 py-3 text-base font-semibold text-white hover:bg-brand-700"
+            >
+              Pay {formatINR(job.amount)} with UPI
+            </a>
+            <p className="mt-2 text-xs text-neutral-400">
+              Opens GPay / PhonePe / Paytm on your phone.
+            </p>
+
+            <div className="my-4 flex items-center gap-3 text-xs text-neutral-400">
+              <span className="h-px flex-1 bg-neutral-200" />
+              or scan from another device
+              <span className="h-px flex-1 bg-neutral-200" />
+            </div>
+
             <Image
               src={qrDataUrl}
               alt="UPI QR code"
@@ -49,8 +66,7 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
               unoptimized
             />
             <p className="mt-3 text-sm">
-              Scan with any UPI app, or pay to{" "}
-              <span className="font-medium">{upiId}</span>
+              Pay to <span className="font-medium">{upiId}</span>
             </p>
           </>
         ) : (

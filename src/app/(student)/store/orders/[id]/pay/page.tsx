@@ -18,12 +18,13 @@ export default async function OrderPayPage({ params }: { params: Promise<{ id: s
   const upiId = settings?.upiId ?? "";
   const rupees = (order.total / 100).toFixed(2);
 
+  let upiLink: string | null = null;
   let qrDataUrl: string | null = null;
   if (upiId) {
-    const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+    upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
       settings?.shopName ?? "Printly",
     )}&am=${rupees}&cu=INR&tn=${encodeURIComponent(order.code)}`;
-    qrDataUrl = await QRCode.toDataURL(link, { width: 240, margin: 1 });
+    qrDataUrl = await QRCode.toDataURL(upiLink, { width: 240, margin: 1 });
   }
 
   return (
@@ -51,11 +52,27 @@ export default async function OrderPayPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-5 text-center">
-        {qrDataUrl ? (
+        {upiLink && qrDataUrl ? (
           <>
+            <a
+              href={upiLink}
+              className="block w-full rounded-lg bg-brand-600 px-4 py-3 text-base font-semibold text-white hover:bg-brand-700"
+            >
+              Pay {formatINR(order.total)} with UPI
+            </a>
+            <p className="mt-2 text-xs text-neutral-400">
+              Opens GPay / PhonePe / Paytm on your phone.
+            </p>
+
+            <div className="my-4 flex items-center gap-3 text-xs text-neutral-400">
+              <span className="h-px flex-1 bg-neutral-200" />
+              or scan from another device
+              <span className="h-px flex-1 bg-neutral-200" />
+            </div>
+
             <Image src={qrDataUrl} alt="UPI QR code" width={200} height={200} className="mx-auto rounded-lg border border-neutral-200" unoptimized />
             <p className="mt-3 text-sm">
-              Scan with any UPI app, or pay to <span className="font-medium">{upiId}</span>
+              Pay to <span className="font-medium">{upiId}</span>
             </p>
           </>
         ) : (
